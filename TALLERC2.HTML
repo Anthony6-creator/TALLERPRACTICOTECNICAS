@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Registro y análisis de calificaciones</title>
+  <style>
+    body { font-family: Arial, sans-serif; background: #f3f5f9; margin: 0; padding: 24px; color: #1f2937; }
+    main { max-width: 640px; margin: 0 auto; background: #ffffff; padding: 24px; border-radius: 8px; border: 1px solid #d1d5db; }
+    h1 { font-size: 22px; margin-top: 0; color: #1e3a5f; }
+    h2 { font-size: 17px; color: #1e3a5f; }
+    label { display: block; margin-bottom: 6px; font-weight: bold; }
+    input { padding: 8px; width: 140px; border: 1px solid #9ca3af; border-radius: 4px; }
+    button { padding: 8px 14px; margin: 6px 4px 0 0; border: none; border-radius: 4px; background: #1e3a5f; color: #ffffff; cursor: pointer; }
+    button:disabled { background: #9ca3af; cursor: not-allowed; }
+    .error { color: #b91c1c; min-height: 20px; margin: 8px 0 0; }
+    .resultado { background: #eef3fb; padding: 12px 16px; border-radius: 6px; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Registro y análisis de calificaciones</h1>
+  
+    <section id="seccionCantidad">
+      <form id="formCantidad" novalidate>
+        <label for="cantidad">Número de evaluaciones a registrar:</label>
+        <input type="number" id="cantidad" min="1" max="50" step="1" required>
+        <button type="submit">Iniciar registro</button>
+      </form>
+      <p id="errorCantidad" class="error"></p>
+    </section>
+  
+    <section id="seccionNotas" hidden>
+      <form id="formNota" novalidate>
+        <label for="nota" id="etiquetaNota"></label>
+        <input type="number" id="nota" min="0" max="10" step="0.01" required>
+        <button type="submit" id="btnRegistrar">Registrar calificación</button>
+      </form>
+      <p id="errorNota" class="error"></p>
+ 
+      <h2>Calificaciones registradas</h2>
+      <ol id="listaNotas"></ol>
+ 
+      <button type="button" id="btnAnalizar">Analizar resultados</button>
+      <button type="button" id="btnReiniciar">Reiniciar</button>
+    </section>
+ 
+    <section id="seccionResultados" hidden>
+      <h2>Resultados del análisis</h2>
+      <div class="resultado" id="resultado"></div>
+    </section>
+    <p id="errorAnalisis" class="error"></p>
+  </main>
+ 
+  <script>
+   
+    const notas = [];
+    let cantidadEvaluaciones = 0;
+ 
+    const seccionCantidad = document.getElementById('seccionCantidad');
+    const seccionNotas = document.getElementById('seccionNotas');
+    const seccionResultados = document.getElementById('seccionResultados');
+    const formCantidad = document.getElementById('formCantidad');
+    const formNota = document.getElementById('formNota');
+    const inputCantidad = document.getElementById('cantidad');
+    const inputNota = document.getElementById('nota');
+    const etiquetaNota = document.getElementById('etiquetaNota');
+    const btnRegistrar = document.getElementById('btnRegistrar');
+    const btnAnalizar = document.getElementById('btnAnalizar');
+    const btnReiniciar = document.getElementById('btnReiniciar');
+    const listaNotas = document.getElementById('listaNotas');
+    const resultado = document.getElementById('resultado');
+    const errorCantidad = document.getElementById('errorCantidad');
+    const errorNota = document.getElementById('errorNota');
+    const errorAnalisis = document.getElementById('errorAnalisis');
+ 
+    const actualizarEtiqueta = () => {
+      etiquetaNota.textContent = `Calificación de la evaluación ${notas.length + 1} de ${cantidadEvaluaciones} (de 0 a 10):`;
+    };
+  
+    const mostrarNotas = () => {
+      let html = '';
+      for (let i = 0; i < notas.length; i++) {
+        html += `<li>Evaluación ${i + 1}: ${notas[i]}</li>`;
+      }
+      listaNotas.innerHTML = html;
+    };
+ 
+   
+    formCantidad.addEventListener('submit', (evento) => {
+      evento.preventDefault();
+      const texto = inputCantidad.value.trim();
+      const valor = Number(texto);
+ 
+      if (texto === '' || isNaN(valor) || valor < 1 || valor > 50 || valor % 1 !== 0) {
+        errorCantidad.textContent = 'Ingrese un número entero entre 1 y 50.';
+        return;
+      }
+ 
+      errorCantidad.textContent = '';
+      cantidadEvaluaciones = valor;
+      seccionCantidad.hidden = true;
+      seccionNotas.hidden = false;
+      actualizarEtiqueta();
+      inputNota.focus();
+    });
+ 
+ 
+    formNota.addEventListener('submit', (evento) => {
+      evento.preventDefault();
+      const texto = inputNota.value.trim();
+      const valor = Number(texto);
+ 
+      if (texto === '' || isNaN(valor)) {
+        errorNota.textContent = 'Ingrese una calificación numérica.';
+        return;
+      }
+      if (valor < 0 || valor > 10) {
+        errorNota.textContent = 'La calificación debe estar entre 0 y 10.';
+        return;
+      }
+ 
+      errorNota.textContent = '';
+      notas.push(valor);
+      mostrarNotas();
+      formNota.reset();
+      seccionResultados.hidden = true;
+ 
+      if (notas.length === cantidadEvaluaciones) {
+        etiquetaNota.textContent = 'Se registraron todas las evaluaciones indicadas.';
+        inputNota.disabled = true;
+        btnRegistrar.disabled = true;
+      } else {
+        actualizarEtiqueta();
+        inputNota.focus();
+      }
+    });
+ 
+   
+    btnAnalizar.addEventListener('click', () => {
+      if (notas.length === 0) {
+        errorAnalisis.textContent = 'No existen calificaciones registradas. Registre al menos una para analizar.';
+        seccionResultados.hidden = true;
+        return;
+      }
+      errorAnalisis.textContent = '';
+ 
+      let suma = 0;
+      let maxima = notas[0];
+      let minima = notas[0];
+      let aprobadas = 0;
+ 
+      for (let i = 0; i < notas.length; i++) {
+        const nota = notas[i];
+        suma += nota;
+        if (nota > maxima) {
+          maxima = nota;
+        }
+        if (nota < minima) {
+          minima = nota;
+        }
+        if (nota >= 7) {
+          aprobadas++;
+        }
+      }
+ 
+      const promedio = suma / notas.length;
+ 
+      resultado.innerHTML = `
+        <p>Promedio: <strong>${Number(promedio.toFixed(2))}</strong></p>
+        <p>Calificación máxima: <strong>${maxima}</strong></p>
+        <p>Calificación mínima: <strong>${minima}</strong></p>
+        <p>Evaluaciones con nota mayor o igual a 7: <strong>${aprobadas}</strong></p>`;
+      seccionResultados.hidden = false;
+    });
+ 
+ 
+    btnReiniciar.addEventListener('click', () => {
+      notas.length = 0;
+      cantidadEvaluaciones = 0;
+      formCantidad.reset();
+      formNota.reset();
+      inputNota.disabled = false;
+      btnRegistrar.disabled = false;
+      listaNotas.innerHTML = '';
+      resultado.innerHTML = '';
+      errorNota.textContent = '';
+      errorAnalisis.textContent = '';
+      seccionNotas.hidden = true;
+      seccionResultados.hidden = true;
+      seccionCantidad.hidden = false;
+      inputCantidad.focus();
+    });
+  </script>
+</body>
+</html>
+ 
