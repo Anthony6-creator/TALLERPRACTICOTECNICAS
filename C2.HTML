@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Control de ventas diarias</title>
+  <style>
+    body { font-family: Arial, sans-serif; background: #f3f5f9; margin: 0; padding: 24px; color: #1f2937; }
+    main { max-width: 640px; margin: 0 auto; background: #ffffff; padding: 24px; border-radius: 8px; border: 1px solid #d1d5db; }
+    h1 { font-size: 22px; margin-top: 0; color: #1e3a5f; }
+    h2 { font-size: 17px; color: #1e3a5f; }
+    label { display: block; margin-bottom: 6px; font-weight: bold; }
+    input { padding: 8px; width: 140px; border: 1px solid #9ca3af; border-radius: 4px; }
+    button { padding: 8px 14px; margin: 6px 4px 0 0; border: none; border-radius: 4px; background: #1e3a5f; color: #ffffff; cursor: pointer; }
+    button:disabled { background: #9ca3af; cursor: not-allowed; }
+    table { border-collapse: collapse; width: 100%; margin-bottom: 12px; }
+    th, td { border: 1px solid #d1d5db; padding: 6px 10px; text-align: left; }
+    th { background: #e5ebf5; }
+    .error { color: #b91c1c; min-height: 20px; margin: 8px 0 0; }
+    .resultado { background: #eef3fb; padding: 12px 16px; border-radius: 6px; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Control de ventas diarias de una tienda</h1>
+  
+    <section id="seccionDias">
+      <form id="formDias" novalidate>
+        <label for="dias">Cantidad de días que se analizarán:</label>
+        <input type="number" id="dias" min="1" max="31" step="1" required>
+        <button type="submit">Iniciar registro</button>
+      </form>
+      <p id="errorDias" class="error"></p>
+    </section>
+  
+    <section id="seccionVentas" hidden>
+      <form id="formVenta" novalidate>
+        <label for="venta" id="etiquetaVenta"></label>
+        <input type="number" id="venta" min="0" step="0.01" required>
+        <button type="submit" id="btnRegistrar">Registrar venta</button>
+        <button type="button" id="btnReiniciar">Reiniciar</button>
+      </form>
+      <p id="errorVenta" class="error"></p>
+ 
+      <h2>Ventas registradas</h2>
+      <table>
+        <thead>
+          <tr><th>Día</th><th>Venta</th></tr>
+        </thead>
+        <tbody id="tablaVentas"></tbody>
+      </table>
+    </section>
+  
+    <section id="seccionResultados" hidden>
+      <h2>Resultados del análisis</h2>
+      <div class="resultado" id="resultado"></div>
+    </section>
+  </main>
+ 
+  <script>
+   
+    const ventas = [];
+    let totalDias = 0;
+    const META = 500;
+    const LIMITE_VENTA = 100;
+  
+    const seccionDias = document.getElementById('seccionDias');
+    const seccionVentas = document.getElementById('seccionVentas');
+    const seccionResultados = document.getElementById('seccionResultados');
+    const formDias = document.getElementById('formDias');
+    const formVenta = document.getElementById('formVenta');
+    const inputDias = document.getElementById('dias');
+    const inputVenta = document.getElementById('venta');
+    const etiquetaVenta = document.getElementById('etiquetaVenta');
+    const btnRegistrar = document.getElementById('btnRegistrar');
+    const btnReiniciar = document.getElementById('btnReiniciar');
+    const tablaVentas = document.getElementById('tablaVentas');
+    const resultado = document.getElementById('resultado');
+    const errorDias = document.getElementById('errorDias');
+    const errorVenta = document.getElementById('errorVenta');
+  
+    const dinero = (valor) => `$${Number(valor.toFixed(2))}`;
+ 
+    const actualizarEtiqueta = () => {
+      etiquetaVenta.textContent = `Venta del día ${ventas.length + 1} de ${totalDias} (en dólares):`;
+    };
+  
+    const mostrarVentas = () => {
+      let filas = '';
+      for (let i = 0; i < ventas.length; i++) {
+        filas += `<tr><td>${i + 1}</td><td>${dinero(ventas[i])}</td></tr>`;
+      }
+      tablaVentas.innerHTML = filas;
+    };
+  
+    const analizarVentas = () => {
+      let total = 0;
+      let mayorVenta = ventas[0];
+      let mejorDia = 1;
+  
+      for (let i = 0; i < ventas.length; i++) {
+        total += ventas[i];
+        if (ventas[i] > mayorVenta) {
+          mayorVenta = ventas[i];
+          mejorDia = i + 1;
+        }
+      }
+ 
+      const promedio = total / ventas.length;
+      let diasSobreLimite = 0;
+      let diasBajoPromedio = 0;
+ 
+      for (let i = 0; i < ventas.length; i++) {
+        if (ventas[i] > LIMITE_VENTA) {
+          diasSobreLimite++;
+        }
+        if (ventas[i] < promedio) {
+          diasBajoPromedio++;
+        }
+      }
+ 
+      let estadoMeta = 'no alcanzada';
+      if (total >= META) {
+        estadoMeta = 'alcanzada';
+      }
+ 
+      resultado.innerHTML = `
+        <p>Total vendido: <strong>${dinero(total)}</strong></p>
+        <p>Promedio diario: <strong>${dinero(promedio)}</strong></p>
+        <p>Venta más alta: <strong>${dinero(mayorVenta)}</strong>, correspondiente al día <strong>${mejorDia}</strong></p>
+        <p>Días con ventas superiores a $${LIMITE_VENTA}: <strong>${diasSobreLimite}</strong></p>
+        <p>Días con ventas inferiores al promedio: <strong>${diasBajoPromedio}</strong></p>
+        <p>Meta de $${META}: <strong>${estadoMeta}</strong></p>`;
+      seccionResultados.hidden = false;
+    };
+ 
+    formDias.addEventListener('submit', (evento) => {
+      evento.preventDefault();
+      const texto = inputDias.value.trim();
+      const valor = Number(texto);
+ 
+      if (texto === '' || isNaN(valor) || valor < 1 || valor > 31 || valor % 1 !== 0) {
+        errorDias.textContent = 'Ingrese un número entero de días entre 1 y 31.';
+        return;
+      }
+ 
+      errorDias.textContent = '';
+      totalDias = valor;
+      seccionDias.hidden = true;
+      seccionVentas.hidden = false;
+      actualizarEtiqueta();
+      inputVenta.focus();
+    });
+  
+    formVenta.addEventListener('submit', (evento) => {
+      evento.preventDefault();
+      const texto = inputVenta.value.trim();
+      const valor = Number(texto);
+ 
+      if (texto === '' || isNaN(valor)) {
+        errorVenta.textContent = 'Ingrese un valor numérico.';
+        return;
+      }
+      if (valor < 0) {
+        errorVenta.textContent = 'La venta no puede ser negativa.';
+        return;
+      }
+ 
+      errorVenta.textContent = '';
+      ventas.push(valor);
+      mostrarVentas();
+      formVenta.reset();
+ 
+      if (ventas.length === totalDias) {
+        etiquetaVenta.textContent = 'Se registraron las ventas de todos los días.';
+        inputVenta.disabled = true;
+        btnRegistrar.disabled = true;
+        analizarVentas();
+      } else {
+        actualizarEtiqueta();
+        inputVenta.focus();
+      }
+    });
+  
+    btnReiniciar.addEventListener('click', () => {
+      ventas.length = 0;
+      totalDias = 0;
+      formDias.reset();
+      formVenta.reset();
+      inputVenta.disabled = false;
+      btnRegistrar.disabled = false;
+      tablaVentas.innerHTML = '';
+      resultado.innerHTML = '';
+      errorVenta.textContent = '';
+      seccionVentas.hidden = true;
+      seccionResultados.hidden = true;
+      seccionDias.hidden = false;
+      inputDias.focus();
+    });
+  </script>
+</body>
+</html>
